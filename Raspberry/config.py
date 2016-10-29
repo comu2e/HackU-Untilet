@@ -1,0 +1,6 @@
+conf = {
+     "IDCF_CHANNEL_URL": "210.152.12.147",
+     "TRIGGER_1_UUID": "55614975-446b-4185-803e-d4639c0e502b",
+     "TRIGGER_1_TOKEN": "dcc41dac",
+     "THRESHOLD": 500
+}
