@@ -29,6 +29,11 @@ bit = 10
 dt=1/baurate
 filename = input("保存するファイル名を入力")
 
+#３段階に分けたときのメモリーのカウント数
+#何度も読み出しが起きないようにするため
+level0_memory_cnt = 0
+level1_memory_cnt = 0
+level2_memory_cnt = 0
 
 def makeFigRaw():
     plt.plot(mq4Volt_array)
@@ -66,12 +71,14 @@ try:
 
 
         #リアルタイム信号表示
-        drawnow(makeFigRaw)
+
         cnt += 1
         # データの保存用データフレーム
 
         if (cnt>=N):
             mq4Volt_array.pop(0)
+            drawnow(makeFigRaw)
+
             # fs = baurate
             # yf = scipy.fft(mq4Volt_array)
             #
