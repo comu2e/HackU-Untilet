@@ -1,4 +1,4 @@
-float sensorValue;
+float sensorValue=0;
 
 void setup()
 {
