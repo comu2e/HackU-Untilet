@@ -11,9 +11,11 @@ import datetime
 #プログラム内でのデータ保存先
 mq4Volt_array = []
 
-time = []
+time_array = []
+
 #プログラム内での一時データ保存先
 mq4temp_array = []
+time_temp_array = []
 #一次微分保存先
 mq4_gradient1 = []
 
@@ -25,7 +27,7 @@ baurate = 9600
 #量子化数
 bit = 10
 dt=1/baurate
-
+filename = input("保存するファイル名を入力")
 
 
 def makeFigRaw():
@@ -34,6 +36,7 @@ def makeFigRaw():
     plt.grid()
 
 try:
+    start = time.time()
     ser = serial.Serial("/dev/tty.usbmodemFA132", baurate)
 
     # 配列の中にあるデータの数
@@ -49,12 +52,19 @@ try:
         bias = 0
         #データの読み出し
         dataString = ser.readline()
+        #測定時刻を測定・計算
+        elapsed_time = time.time() - start
         #データ変換
         mq4Value = int(dataString)
         mq4Volt = 5*mq4Value/(1024)  - bias
         #配列への追加
+        time_array.append(elapsed_time)
+        time_temp_array.append(elapsed_time)
+
         mq4Volt_array.append(mq4Volt)
         mq4temp_array.append(mq4Volt)
+
+
         #リアルタイム信号表示
         drawnow(makeFigRaw)
         cnt += 1
@@ -67,9 +77,19 @@ try:
             #
             # drawnow(makeFigRaw)
             # plt.pause(1/9600)
+        df = pd.DataFrame()
+        df["time"] = time_array
+        df["mq4_volt"] = mq4temp_array
+        # df = pd.DataFrame({"time":time_array,"mq4Volt":mq4temp_array})
+        # df["mq4Volt"] = mq4temp_array
+        df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
+        print("保存されました")
+
 except KeyboardInterrupt:
-    df = pd.DataFrame({"mq4Volt":mq4temp_array})
+    df = pd.DataFrame()
+    df["time"] = time_array
+    df["mq4_volt"] = mq4temp_array
+    # df = pd.DataFrame({"time":time_array,"mq4Volt":mq4temp_array})
     # df["mq4Volt"] = mq4temp_array
-    df.to_csv("データ.txt", encoding="Shift_JIS", sep="\t")
-    print(df)
+    df.to_csv(filename+".txt", encoding="Shift_JIS", sep="\t")
     print("保存されました")
