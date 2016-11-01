@@ -50,20 +50,20 @@ class Untilet():
         self.tgs_temp_array = tgs_temp_array
         self.time_temp_array = time_temp_array
         # APIを叩くための設定ファイル
-
+    # plot
     def makeFig(self):
         plt.plot(self.mq4Volt_array,"ro-")
         plt.ylim(-0.1, 5.1)
         plt.grid()
     def makeFig2(self):
         #２つのセンサの値を表示
-        plt.plot(self.mq4Volt_array,"ro-")
+        plt.plot(self.mq4Volt_array,"ro-","CH4")
         plt.ylim(-0.1, 5.1)
         plt.grid()
         plt2 = plt.twinx()
         # plt.ylim(1000,5000)
         plt2.plot(self.tgsVolt_array,"b^-",label="H2S")
-
+    #api
     def config_parser(self, trigger_name):
         if trigger_name == "conf_triger1":
             self.conf = config.conf_triger1
@@ -90,67 +90,12 @@ class Untilet():
             print("Trigge2にpostされました!")
         else:
             print("post error")
+    #   測定解析
     def translatebyte_toVolt(self,byte_data):
         #電圧変換
            return 5*byte_data/1024
-
-    def measurement(self, start_time=time.time()):
-        filename = input("保存するファイル名を入力")
-
-        try:
-            while True:
-                while ((self.ser).inWaiting() == 0):
-                    # 入力がなくなったら取得したデータすべてをdfに入れて保存
-                    pass
-                # データの読み出し
-                dataString = (self.ser).readline()
-                # 測定時刻を測定・計算
-                elapsed_time = time.time() - start_time
-                # データ変換
-                mq4Value = int(dataString)
-                mq4Volt = self.translatebyte_toVolt(mq4Value)
-                # 配列への追加
-                (self.time_array).append(elapsed_time)
-                self.time_temp_array.append(elapsed_time)
-
-                self.mq4Volt_array.append(mq4Volt)
-                self.mq4temp_array.append(mq4Volt)
-
-                # リアルタイム信号表示
-                self.measure_cnt += 1
-                # データの取得数を一つ追加
-                # データの描画
-                drawnow(self.makeFig)
-
-                # mq4_Volt内にあるデータがN個以上になったら最初のデータを除く
-                # dequeを使ってもいい
-                if (self.measure_cnt >= self.N):
-                    self.mq4Volt_array.pop(0)
-
-                if self.measure_cnt // self.judge_rate == 0:
-                    # judge_rateの分だけサンプリングデータの測定をしたら判断をする
-                    self.judge_and_api(self.mq4temp_array)
-
-                # データ保存処理
-                ref_df = pd.DataFrame()
-                ref_df["time"] = self.time_array
-                ref_df["mq4_volt"] = self.mq4temp_array
-                #
-                # if self.measure_cnt % 100 == 0:
-                #     ref_df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
-                #     print("保存されました")
-                # print(self.judge_cnt_array)
-        except KeyboardInterrupt:
-            ref_df = pd.DataFrame()
-            ref_df["time"] = self.time_array
-            ref_df["mq4_volt"] = self.mq4temp_array
-
-            ref_df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
-            print("保存されました")
-            return ref_df
-
-
-    def graphLogger(self):
+    # グラフとデータログ 初期設定はMQ４のみ
+    def graphLogger(self,inst = 1):
         # 一次微分保存先
         mq4_gradient1 = []
         # mq4Volt_arrayにいれるデータの数
@@ -177,44 +122,7 @@ class Untilet():
                 bias = 0
                 # データの読み出し
                 dataString = (self.ser).readline()
-                if self.double == 2:
-                #mq4とtgsの同時測定時
-                    tgsval,mq4val = dataString.split(",")
-
-                    tgsValue = int(tgsval)
-                    mq4Value = int(mq4val)
-                    elapsed_time = time.time() - start
-                    # データ変換
-                    tgsVolt = self.translatebyte_toVolt(tgsValue)
-                    mq4Volt = self.translatebyte_toVolt(mq4Value)
-
-                    # 配列への追加
-                    (self.time_array).append(elapsed_time)
-                    self.time_temp_array.append(elapsed_time)
-
-                    self.mq4Volt_array.append(mq4Volt)
-                    self.mq4temp_array.append(mq4Volt)
-
-                    self.tgsVolt_array.append(tgsVolt)
-                    self.tgs_temp_array.append(tgsVolt)
-
-                    # リアルタイム信号表示
-                    self.measure_cnt += 1
-                    # mq4_Volt内にあるデータがN個以上になったら最初のデータを除く
-                    # dequeを使う
-                    if (self.measure_cnt >= N):
-                        self.mq4Volt_array.pop(0)
-                        self.tgsVolt_array.pop(0)
-                        drawnow(self.makeFig)
-                        # plt.pause(2 / 9600)
-                    df = pd.DataFrame()
-                    df["time"] = self.time_array
-                    df["mq4_volt"] = self.mq4temp_array
-                    df["tgs Volt"] = self.tgs_temp_array
-
-                    df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
-                    print("保存されました")
-                elif self.double == 1:
+                if inst == 1:
                 #mq4の測定時のみ
                 # 測定時刻を測定・計算
                     elapsed_time = time.time() - start
@@ -242,6 +150,46 @@ class Untilet():
 
                     df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
                     print("保存されました")
+                # tgsとMQ4の同時測定
+                elif inst == 2:
+                #mq4とtgsの同時測定時
+                    tgsval,mq4val = dataString.split(",")
+
+                    tgsValue = int(tgsval)
+                    mq4Value = int(mq4val)
+                    elapsed_time = time.time() - start
+                    # データ変換
+                    tgsVolt = self.translatebyte_toVolt(tgsValue)
+                    mq4Volt = self.translatebyte_toVolt(mq4Value)
+
+                    # 配列への追加
+                    (self.time_array).append(elapsed_time)
+                    self.time_temp_array.append(elapsed_time)
+
+                    self.mq4Volt_array.append(mq4Volt)
+                    self.mq4temp_array.append(mq4Volt)
+
+                    self.tgsVolt_array.append(tgsVolt)
+                    self.tgs_temp_array.append(tgsVolt)
+
+                    # リアルタイム信号表示
+                    self.measure_cnt += 1
+                    # mq4_Volt内にあるデータがN個以上になったら最初のデータを除く
+                    # dequeを使う
+                    if (self.measure_cnt >= N):
+                        self.mq4Volt_array.pop(0)
+                        self.tgsVolt_array.pop(0)
+                        # plotはmakeFig2
+                        drawnow(self.makeFig2)
+                        # plt.pause(2 / 9600)
+                    df = pd.DataFrame()
+                    df["time"] = self.time_array
+                    df["mq4_volt"] = self.mq4temp_array
+                    df["tgs Volt"] = self.tgs_temp_array
+
+                    df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
+                    print("保存されました")
+
 
         except KeyboardInterrupt:
             df = pd.DataFrame()
@@ -322,7 +270,7 @@ class Untilet():
         # judge_kss = 0
         sampling_data_array = np.array(sampling_data_array)
         sampling_mean = sampling_data_array.mean()
-        sampling_disp = sampling_data_array.var()
+        # sampling_disp = sampling_data_array.var()
 
         if sampling_mean < up1:
             # judge_kss = 0
@@ -453,11 +401,16 @@ class Untilet():
                     pass
                 # データの読み出し
                 dataString = (self.ser).readline()
+                mq4Value,tgsValue = dataString.split(",")
                 # 測定時刻を測定・計算
                 elapsed_time = time.time() - start_time
                 # データ変換
-                mq4Value = int(dataString)
+                mq4Value = int(mq4Value)
                 mq4Volt = self.translatebyte_toVolt(mq4Value)
+
+                tgsValue = int(tgsValue)
+                tgsVolt = self.translatebyte_toVolt(tgsValue)
+
                 # 配列への追加
                 (self.time_array).append(elapsed_time)
                 self.time_temp_array.append(elapsed_time)
@@ -465,26 +418,30 @@ class Untilet():
                 self.mq4Volt_array.append(mq4Volt)
                 self.mq4temp_array.append(mq4Volt)
 
+                self.tgsVolt_array.append(tgsVolt)
+                self.tgs_temp_array.append(tgsVolt)
+
                 # リアルタイム信号表示
                 self.measure_cnt += 1
                 # データの取得数を一つ追加
                 # データの描画
-                drawnow(self.makeFig)
+                drawnow(self.makeFig2)
 
                 # mq4_Volt内にあるデータがN個以上になったら最初のデータを除く
                 # dequeを使ってもいい
                 if (self.measure_cnt >= self.N):
                     self.mq4Volt_array.pop(0)
+                    self.tgsVolt_array.pop(0)
 
                 if self.measure_cnt // self.judge_rate == 0:
                     # judge_rateの分だけサンプリングデータの測定をしたら判断をする
                     self.judge_and_api(self.mq4temp_array)
-
+                    #tgsの方の処理はまだ
                 # データ保存処理
                 ref_df = pd.DataFrame()
                 ref_df["time"] = self.time_array
                 ref_df["mq4_volt"] = self.mq4temp_array
-
+                ref_df["tgs_Volt"] = self.tgs_temp_array
                 if self.measure_cnt % 100 == 0:
                     ref_df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
                     print("保存されました")
@@ -494,73 +451,10 @@ class Untilet():
             ref_df = pd.DataFrame()
             ref_df["time"] = self.time_array
             ref_df["mq4_volt"] = self.mq4temp_array
+            ref_df["tgs_Volt"] = self.tgs_temp_array
 
             ref_df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
             print("保存されました")
-        def demo2(self, take_data_Number=512):
-            #mq4だけのdemo
-            filename = input("ファイルの保存名を入力")
-            start_time = time.time()
-            # ３段階に分けたときのメモリーのカウント数
-            # 何度も読み出しが起きないようにするため 最初は0回
-            level0_memory_cnt = self.judge_cnt_array[0]
-            level1_memory_cnt = self.judge_cnt_array[1]
-            level2_memory_cnt = self.judge_cnt_array[1]
-            # 判断するデータの数
-            average_judge = []
-
-            try:
-                while True:
-                    while ((self.ser).inWaiting() == 0):
-                        # 入力がなくなったら取得したデータすべてをdfに入れて保存
-                        pass
-                    # データの読み出し
-                    dataString = (self.ser).readline()
-                    # 測定時刻を測定・計算
-                    elapsed_time = time.time() - start_time
-                    # データ変換
-                    mq4Value = int(dataString)
-                    mq4Volt = self.translatebyte_toVolt(mq4Value)
-                    # 配列への追加
-                    (self.time_array).append(elapsed_time)
-                    self.time_temp_array.append(elapsed_time)
-
-                    self.mq4Volt_array.append(mq4Volt)
-                    self.mq4temp_array.append(mq4Volt)
-
-                    # リアルタイム信号表示
-                    self.measure_cnt += 1
-                    # データの取得数を一つ追加
-                    # データの描画
-                    drawnow(self.makeFig)
-
-                    # mq4_Volt内にあるデータがN個以上になったら最初のデータを除く
-                    # dequeを使ってもいい
-                    if (self.measure_cnt >= self.N):
-                        self.mq4Volt_array.pop(0)
-
-                    if self.measure_cnt // self.judge_rate == 0:
-                        #judge_rateの分だけサンプリングデータの測定をしたら判断をする
-                            self.judge_and_api(self.mq4temp_array)
-
-                    # データ保存処理
-                    ref_df = pd.DataFrame()
-                    ref_df["time"] = self.time_array
-                    ref_df["mq4_volt"] = self.mq4temp_array
-
-                    if self.measure_cnt % 100 == 0:
-                        ref_df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
-                        print("保存されました")
-                    print(self.judge_cnt_array)
-
-            except KeyboardInterrupt:
-                ref_df = pd.DataFrame()
-                ref_df["time"] = self.time_array
-                ref_df["mq4_volt"] = self.mq4temp_array
-
-                ref_df.to_csv(filename + ".txt", encoding="Shift_JIS", sep="\t")
-                print("保存されました")
-
 
 unt = Untilet()
-unt.demo()
+unt.demo1()
